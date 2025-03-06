@@ -1,17 +1,17 @@
-# NVIDIA Maxine Studio Voice NIM Client
+# NVIDIA Studio Voice NIM Client
 
-This package has a sample client which demonstrates interaction with a Maxine Studio Voice NIM.
+This package has a sample client which demonstrates interaction with a Studio Voice NIM.
 
 ## Getting Started
 
 NVIDIA Maxine NIM Client packages use gRPC APIs. Instructions below demonstrate usage of Studio Voice NIM using Python gRPC client.
-Additionally, access the [Try API](https://build.nvidia.com/nvidia/studiovoice/api) feature to experience the NVIDIA Maxine Studio Voice NIM API without hosting your own servers, as it leverages the NVIDIA Cloud Functions backend.
+Additionally, access the [Try API](https://build.nvidia.com/nvidia/studiovoice/api) feature to experience the NVIDIA Studio Voice NIM API without hosting your own servers, as it leverages the NVIDIA Cloud Functions backend.
 
 ## Pre-requisites
 
 - Ensure you have Python 3.10 or above installed on your system.
 Please refer to the [Python documentation](https://www.python.org/downloads/) for download and installation instructions.
-- Access to NVIDIA Maxine Studio Voice NIM Container / Service.
+- Access to NVIDIA Studio Voice NIM Container / Service.
 
 ## Usage guide
 
@@ -33,7 +33,7 @@ pip install -r requirements.txt
 
 ### 3. Host the NIM Server
 
-Before running client part of Maxine Studio Voice, please set up a server.
+Before running client part of Studio Voice, please set up a server.
 The simplest way to do that is to follow the [quick start guide](https://docs.nvidia.com/nim/maxine/studio-voice/latest/index.html).
 This step can be skipped when using [Try API](https://build.nvidia.com/nvidia/studiovoice/api).
 
@@ -68,38 +68,49 @@ Go to the scripts directory.
 cd scripts
 ```
 
-#### Usage for Hosted NIM Request
+#### Usage for Transactional NIM Request
+
+To run client in transactional mode. Set `--model-type` in accordance with the server, default is set to `48k-hq`. The following example command processes the packaged sample audio file in transactional mode and generates a `studio_voice_48k_output.wav` file in the current folder.
 
 ```bash
-python studio_voice.py --target <server_ip:port> --input <input_audio_file_path> --output <output_audio_file_path>
- ```
+python studio_voice.py --target 127.0.0.1:8001 --input ../assets/studio_voice_48k_input.wav --output studio_voice_48k_output.wav --model-type 48k-hq
+```
 
-The following example command processes the packaged sample audio file and generates a `studio_voice_48k_output.wav` file in the current folder.
+#### Usage for Streaming NIM Request
+
+To run the client in streaming mode, add `--streaming`. The following example command processes the packaged sample audio file in streaming mode and generates a `studio_voice_48k_output.wav` file in the current folder.
 
 ```bash
-python3 studio_voice.py --target 127.0.0.1:8001 --input ../assets/studio_voice_48k_input.wav --output studio_voice_48k_output.wav
- ```
+python studio_voice.py --target 127.0.0.1:8001 --input ../assets/studio_voice_48k_input.wav --output studio_voice_48k_output.wav --streaming --model-type 48k-ll
+```
 
 Only WAV files are supported.
 
 #### Usage for Preview API Request
 
 ```bash
-python studio_voice.py --use-ssl \
+python studio_voice.py --preview-mode \
+    --ssl-mode TLS \
     --target grpc.nvcf.nvidia.com:443 \
     --function-id <function_id> \
     --api-key $API_KEY_REQUIRED_IF_EXECUTING_OUTSIDE_NGC \
     --input <input_file_path> \
-    --output <output_file_path>
+    --output <output_file_path> \
 ```
 
 #### Command Line Arguments
 
-- `--use-ssl`       - Flag to control if SSL/TLS encryption should be used. When running preview SSL must be used.
+- `--preview-mode`  - Flag to send request to preview NVCF server on https://build.nvidia.com/nvidia/studiovoice/api.
+- `--ssl-mode`      - Flag to control if SSL MTLS/TLS encryption should be used. When running preview SSL must be set to TLS. Default value is `None`.
+- `--ssl-key`       - The path to ssl private key. Default value is `None`.
+- `--ssl-cert`      - The path to ssl certificate chain. Default value is `None`.
+- `--ssl-root-cert` - The path to ssl root certificate. Default value is `None`.
 - `--target`        - <IP:port> of gRPC service, when hosted locally. Use grpc.nvcf.nvidia.com:443 when hosted on NVCF.
 - `--api-key`       - NGC API key required for authentication, utilized when using `TRY API` ignored otherwise.
 - `--function-id`   - NVCF function ID for the service, utilized when using `TRY API` ignored otherwise.
 - `--input`         - The path to the input audio file. Default value is `../assets/studio_voice_48k_input.wav`.
 - `--output`        - The path for the output audio file. Default is current directory (scripts) with name `studio_voice_48k_output.wav`.
+- `--streaming`     - Flag to control if streaming mode should be used. Transactional mode will be used by default.
+- `--model-type`    - Studio Voice model type hosted on server. It can be set to `48k-hq/48k-ll/16k-hq`. Default value is `48k-hq`.
 
 Refer the [docs](https://docs.nvidia.com/nim/maxine/studio-voice/latest/index.html) for more information.
