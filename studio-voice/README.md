@@ -26,10 +26,40 @@ cd nim-clients/studio-voice
 
 ### 2. Install Dependencies
 
+#### Create Virtual Environment
+
+Create a virtual environment named `nim` for dependency isolation:
+
+**On Linux/macOS:**
+```bash
+python3 -m venv nim
+source nim/bin/activate
+pip install -r requirements.txt
+```
+
+**On Windows:**
+```bash
+python -m venv nim
+nim\Scripts\activate.bat
+pip install -r requirements.txt
+```
+
+#### Alternative Installation (without virtual environment)
+
+If you prefer to install dependencies globally:
+
+**On Linux:**
 ```bash
 sudo apt-get install python3-pip
 pip install -r requirements.txt
 ```
+
+**On Windows:**
+```bash
+pip install -r requirements.txt
+```
+
+**Note:** The virtual environment approach is recommended, especially when using the interactive UI interfaces, as they rely on the `nim` virtual environment for dependency management and automatic installation features.
 
 ### 3. Host the NIM Server
 
@@ -114,3 +144,108 @@ python studio_voice.py --preview-mode \
 - `--model-type`    - Studio Voice model type hosted on server. It can be set to `48k-hq/48k-ll/16k-hq`. Default value is `48k-hq`.
 
 Refer the [docs](https://docs.nvidia.com/nim/maxine/studio-voice/latest/index.html) for more information.
+
+## Interactive User Interfaces
+
+This package includes several interactive user interfaces to simplify bulk audio processing workflows. These UIs provide an intuitive way to process multiple audio files with progress tracking and automatic file management.
+
+### Web-Based Interface
+
+Launch a web interface for Studio Voice processing through your browser:
+
+```bash
+# Simple web UI (recommended for stability)
+start_simple_web_ui.bat
+
+# Advanced web UI (with real-time updates)
+start_advanced_web_ui.bat
+```
+
+**Features:**
+- Upload individual files or scan entire folder structures
+- Real-time progress tracking with queue management
+- Support for all Studio Voice model types (48k-hq, 48k-ll, 16k-hq)
+- Automatic file backup and replacement workflow
+- Browser-based interface accessible at http://localhost:5000
+
+### Desktop Application
+
+Launch a native Windows desktop application:
+
+```bash
+# Standard desktop UI
+start_desktop_ui.bat
+
+# Standalone version with built-in dependency management
+start_desktop_ui_standalone.bat
+```
+
+**Features:**
+- Native Windows GUI using tkinter
+- Folder browsing and batch file selection
+- Automatic dependency checking and installation
+- In-place file processing with backup management
+- Progress tracking with detailed status updates
+- Support for all Studio Voice model configurations
+
+### Enhanced Command Line Interface
+
+Launch an improved CLI with rich formatting and interactive prompts:
+
+```bash
+start_enhanced_cli.bat
+```
+
+**Features:**
+- Interactive model selection and configuration
+- Rich progress bars and status formatting
+- Folder scanning with file filtering
+- Batch processing with detailed logging
+- Color-coded output and error handling
+
+### File Management Workflow
+
+All UI interfaces follow a consistent file management approach:
+
+1. **Original files** are automatically backed up to `../original audio/` relative to the source location
+2. **Processed files** replace the original files in their current location
+3. **Folder structure** is preserved during batch operations
+4. **File naming** remains unchanged to maintain existing workflows
+
+### Dependency Management
+
+The UI launchers include automatic dependency checking and installation:
+
+- **Virtual environment** activation (uses existing `nim/` environment)
+- **Requirements installation** from `requirements.txt`
+- **Missing module detection** with automatic resolution
+- **Error handling** with clear troubleshooting guidance
+
+### Troubleshooting UI Issues
+
+If you encounter dependency errors:
+
+1. Run the dependency checker:
+   ```bash
+   cd desktop-ui
+   python check_dependencies.py
+   ```
+
+2. Manually install missing packages:
+   ```bash
+   nim\Scripts\activate.bat
+   pip install grpcio grpcio-tools protobuf flask
+   ```
+
+3. Use the standalone versions which include built-in dependency management
+
+### UI Configuration
+
+All interfaces support the same Studio Voice configuration options:
+
+- **Model Types**: 48k-hq (default), 48k-ll, 16k-hq
+- **Server Target**: 127.0.0.1:8001 (configurable)
+- **Processing Modes**: Transactional and streaming
+- **File Formats**: WAV files (same as command line client)
+
+The UI system maintains full compatibility with the existing Studio Voice NIM server setup and does not require additional server-side configuration.

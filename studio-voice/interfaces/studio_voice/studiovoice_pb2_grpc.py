@@ -51,10 +51,10 @@ class MaxineStudioVoiceServicer(object):
     def EnhanceAudio(self, request_iterator, context):
         """EnhanceAudio is a bidirectional streaming RPC to run the
         Maxine Studio Voice NIM on audio files.
-        
+
         The client streams the input audio file in chunks in the input message and 
         receives the output audio file in chunks in the output message.
-        
+
         The client should only pass one audio file per RPC invocation.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Studio Voice</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(245, 101, 101, 0.4);
+        }
+
+        .job-item {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .job-item:hover {
+            background: #edf2f7;
+        }
+
+        .job-info {
+            flex: 1;
+        }
+
+        .job-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .job-details {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        .job-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-right: 10px;
+        }
+
+        .status-queued {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .status-processing {
+            background: #bee3f8;
+            color: #2b6cb0;
+        }
+
+        .status-completed {
+            background: #c6f6d5;
+            color: #276749;
+        }
+
+        .status-failed {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .status-cancelled {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .refresh-info {
+            text-align: center;
+            color: #718096;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .nav-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Processing Dashboard</h1>
+            <p>Monitor your audio enhancement jobs</p>
+        </div>
+
+        <div class="card">
+            <div class="nav-buttons">
+                <a href="/" class="btn btn-secondary">← Home</a>
+                <a href="/upload" class="btn">🎯 Upload More Files</a>
+                <button onclick="refreshData()" class="btn btn-secondary">🔄 Refresh</button>
+            </div>
+            
+            <div class="refresh-info">
+                <p>Dashboard auto-refreshes every 5 seconds</p>
+                <p>Last updated: <span id="lastUpdate">Loading...</span></p>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalJobs">-</div>
+                <div class="stat-label">Total Jobs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="queueSize">-</div>
+                <div class="stat-label">In Queue</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completedJobs">-</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="processingStatus">-</div>
+                <div class="stat-label">Status</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Current Jobs & History</h2>
+            <div id="jobList">
+                <div style="text-align: center; color: #a0aec0; padding: 40px;">
+                    Loading jobs...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let refreshInterval;
+        
+        function updateLastUpdate() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+        
+        async function refreshData() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                // Update stats
+                const allJobs = [...data.current_jobs, ...data.job_history];
+                const completed = allJobs.filter(job => job.status === 'completed').length;
+                
+                document.getElementById('totalJobs').textContent = allJobs.length;
+                document.getElementById('queueSize').textContent = data.queue_size;
+                document.getElementById('completedJobs').textContent = completed;
+                document.getElementById('processingStatus').textContent = data.is_processing ? 'Processing' : 'Idle';
+                
+                // Update job list
+                updateJobList(allJobs);
+                updateLastUpdate();
+                
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                document.getElementById('jobList').innerHTML = `
+                    <div style="text-align: center; color: #e53e3e; padding: 20px;">
+                        Error loading data. Please refresh the page.
+                    </div>
+                `;
+            }
+        }
+        
+        function updateJobList(jobs) {
+            const jobList = document.getElementById('jobList');
+            
+            if (jobs.length === 0) {
+                jobList.innerHTML = `
+                    <div style="text-align: center; color: #a0aec0; padding: 40px;">
+                        No jobs yet. <a href="/upload" class="btn" style="margin-left: 10px;">Upload some files</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            jobList.innerHTML = jobs.map(job => `
+                <div class="job-item">
+                    <div class="job-info">
+                        <div class="job-name">${job.filename}</div>
+                        <div class="job-details">
+                            ${job.model_type} • ${job.streaming ? 'Streaming' : 'Batch'} • 
+                            ${new Date(job.created_at).toLocaleTimeString()}
+                        </div>
+                        ${job.status === 'processing' ? `
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${job.progress}%"></div>
+                            </div>
+                        ` : ''}
+                        ${job.error_message ? `
+                            <div style="color: #e53e3e; font-size: 0.9rem; margin-top: 5px;">
+                                ${job.error_message}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="job-status status-${job.status}">${job.status}</div>
+                        ${job.status === 'queued' ? `
+                            <button class="btn btn-danger" onclick="cancelJob('${job.job_id}')" style="padding: 5px 10px; font-size: 0.8rem;">Cancel</button>
+                        ` : ''}
+                        ${job.status === 'completed' ? `
+                            <a href="/download/${job.job_id}" class="btn" style="padding: 5px 10px; font-size: 0.8rem;">📥 Download</a>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function cancelJob(jobId) {
+            try {
+                const response = await fetch(`/api/jobs/${jobId}/cancel`, { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    refreshData(); // Refresh to show updated status
+                } else {
+                    alert(result.error || 'Failed to cancel job');
+                }
+            } catch (error) {
+                alert('Error cancelling job: ' + error.message);
+            }
+        }
+        
+        // Start auto-refresh
+        refreshData(); // Initial load
+        refreshInterval = setInterval(refreshData, 5000); // Refresh every 5 seconds
+        
+        // Stop auto-refresh when page is hidden
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                clearInterval(refreshInterval);
+            } else {
+                refreshData();
+                refreshInterval = setInterval(refreshData, 5000);
+            }
+        });
+    </script>
+</body>
+</html>

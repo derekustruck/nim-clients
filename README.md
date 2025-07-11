@@ -15,3 +15,13 @@ This repository provides sample client applications to interact with Maxine NIMs
 
 - [`audio2face-2d`](audio2face-2d) - NVIDIA Maxine Audio2Face-2D feature generates facial animations from a portrait photo and audio input, synchronizing mouth movements with speech to create realistic and engaging video outputs.
 [[Demo](https://build.nvidia.com/nvidia/audio2face-2d)] , [[Docs](https://docs.nvidia.com/nim/maxine/audio2face-2d/latest/index.html)]
+
+podman run -it --name=studio-voice \
+    --device nvidia.com/gpu=all \
+    --shm-size=8GB \
+    -e NGC_API_KEY=$NGC_API_KEY \
+    -e FILE_SIZE_LIMIT=36700160 \
+    -e STREAMING=false \
+    -p 8000:8000 \
+    -p 8001:8001 \
+    nvcr.io/nim/nvidia/maxine-studio-voice:latest

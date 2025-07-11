@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Files - Studio Voice</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .upload-options {
+            margin-bottom: 20px;
+        }
+
+        .option-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .upload-mode {
+            transition: all 0.3s ease;
+        }
+
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background-color: #f7fafc;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #a0aec0;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .form-group select, .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group select:focus, .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .file-list {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Upload Audio Files</h1>
+            <p>Select files and configure processing settings</p>
+        </div>
+
+        <div class="card">
+            <a href="/" class="btn btn-secondary">← Back to Home</a>
+            
+            <div class="upload-options">
+                <div class="option-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="showFileUpload()">📄 Select Individual Files</button>
+                    <button type="button" class="btn" onclick="showFolderUpload()">📁 Select Root Folder</button>
+                </div>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                <!-- File Upload Mode -->
+                <div id="fileUploadMode" class="upload-mode">
+                    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                        <div class="upload-icon">�</div>
+                        <h3>Click to select audio files</h3>
+                        <p>Select multiple files at once</p>
+                        <p><small>Supported: WAV, MP3, FLAC, M4A</small></p>
+                    </div>
+                    <input type="file" id="fileInput" name="files" multiple accept=".wav,.mp3,.flac,.m4a" class="hidden">
+                </div>
+
+                <!-- Folder Upload Mode -->
+                <div id="folderUploadMode" class="upload-mode hidden">
+                    <div class="upload-area">
+                        <div class="upload-icon">📁</div>
+                        <h3>Enter Root Folder Path</h3>
+                        <p>The system will scan all subfolders for audio files</p>
+                        <input type="text" id="folderPath" name="folder_path" placeholder="e.g., D:\CaptureManager\Media" style="width: 100%; margin-top: 15px; padding: 10px; border: 2px solid #cbd5e0; border-radius: 5px; font-size: 1rem;">
+                        <button type="button" class="btn btn-secondary" onclick="scanFolder()" style="margin-top: 10px;">🔍 Scan Folder</button>
+                    </div>
+                </div>
+                
+                <div id="fileList" class="file-list hidden">
+                    <strong>Selected files:</strong>
+                    <div id="fileItems"></div>
+                </div>
+
+                <div class="settings-grid">
+                    <div class="form-group">
+                        <label for="modelType">Model Type</label>
+                        <select id="modelType" name="model_type">
+                            <option value="48k-hq">48kHz High Quality</option>
+                            <option value="48k-ll">48kHz Low Latency</option>
+                            <option value="16k-hq">16kHz High Quality</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="streaming">Processing Mode</label>
+                        <select id="streaming" name="streaming">
+                            <option value="false">Batch Processing</option>
+                            <option value="true">Streaming</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" id="uploadBtn" disabled>🚀 Start Processing</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const fileItems = document.getElementById('fileItems');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const folderPath = document.getElementById('folderPath');
+        
+        let currentMode = 'files'; // 'files' or 'folder'
+        let scannedFiles = [];
+        
+        function showFileUpload() {
+            document.getElementById('fileUploadMode').classList.remove('hidden');
+            document.getElementById('folderUploadMode').classList.add('hidden');
+            currentMode = 'files';
+            updateUploadButton();
+        }
+        
+        function showFolderUpload() {
+            document.getElementById('fileUploadMode').classList.add('hidden');
+            document.getElementById('folderUploadMode').classList.remove('hidden');
+            currentMode = 'folder';
+            updateUploadButton();
+        }
+        
+        async function scanFolder() {
+            const path = folderPath.value.trim();
+            if (!path) {
+                alert('Please enter a folder path');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/scan-folder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ folder_path: path })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    scannedFiles = result.files;
+                    displayScannedFiles(result.files);
+                    updateUploadButton();
+                } else {
+                    alert(result.error || 'Failed to scan folder');
+                }
+            } catch (error) {
+                alert('Error scanning folder: ' + error.message);
+            }
+        }
+        
+        function displayScannedFiles(files) {
+            if (files.length > 0) {
+                fileList.classList.remove('hidden');
+                fileItems.innerHTML = '';
+                
+                files.forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.textContent = file;
+                    fileItems.appendChild(fileItem);
+                });
+                
+                // Show summary
+                const summary = document.createElement('div');
+                summary.className = 'file-item';
+                summary.style.fontWeight = 'bold';
+                summary.style.backgroundColor = '#e6fffa';
+                summary.textContent = `Found ${files.length} audio files`;
+                fileItems.insertBefore(summary, fileItems.firstChild);
+                
+            } else {
+                fileList.classList.add('hidden');
+                alert('No audio files found in the specified folder');
+            }
+        }
+        
+        function updateUploadButton() {
+            if (currentMode === 'files') {
+                const files = fileInput.files;
+                uploadBtn.disabled = files.length === 0;
+                uploadBtn.textContent = files.length > 0 
+                    ? `🚀 Process ${files.length} file${files.length > 1 ? 's' : ''}` 
+                    : '🚀 Start Processing';
+            } else if (currentMode === 'folder') {
+                uploadBtn.disabled = scannedFiles.length === 0;
+                uploadBtn.textContent = scannedFiles.length > 0 
+                    ? `🚀 Process ${scannedFiles.length} file${scannedFiles.length > 1 ? 's' : ''}` 
+                    : '🚀 Start Processing';
+            }
+        }
+        
+        fileInput.addEventListener('change', function(e) {
+            if (currentMode === 'files') {
+                const files = e.target.files;
+                
+                if (files.length > 0) {
+                    fileList.classList.remove('hidden');
+                    fileItems.innerHTML = '';
+                    
+                    for (let i = 0; i < files.length; i++) {
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'file-item';
+                        fileItem.textContent = files[i].name;
+                        fileItems.appendChild(fileItem);
+                    }
+                } else {
+                    fileList.classList.add('hidden');
+                }
+                
+                updateUploadButton();
+            }
+        });
+        
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            if (currentMode === 'folder' && scannedFiles.length === 0) {
+                e.preventDefault();
+                alert('Please scan a folder first');
+                return;
+            }
+            
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '📤 Processing...';
+            
+            // Add hidden input for folder mode
+            if (currentMode === 'folder') {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'mode';
+                hiddenInput.value = 'folder';
+                this.appendChild(hiddenInput);
+            }
+        });
+        
+        // Initialize with file upload mode
+        showFileUpload();
+    </script>
+</body>
+</html>
