@@ -32,6 +32,29 @@ if not exist "%WEB_UI_DIR%" (
     exit /b 1
 )
 
+REM Check if Studio Voice NIM server is running
+echo Checking Studio Voice NIM server connectivity...
+netstat -an | findstr :8001 >nul 2>&1
+if errorlevel 1 (
+    echo WARNING: Studio Voice NIM server not detected on port 8001
+    echo.
+    echo The server needs to be running for the Web UI to process audio.
+    echo You can start it by running: studio_voice_server.bat
+    echo.
+    echo Continue anyway? The Web UI will start but audio processing will fail.
+    choice /C YN /M "Continue without server"
+    if errorlevel 2 (
+        echo.
+        echo Exiting. Please start the server first with: studio_voice_server.bat
+        pause
+        exit /b 1
+    )
+    echo.
+    echo Continuing without server...
+) else (
+    echo ✓ Studio Voice NIM server is running on port 8001
+)
+
 REM Activate virtual environment
 echo Activating virtual environment...
 call "%VENV_ACTIVATE%"

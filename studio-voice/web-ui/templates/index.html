@@ -147,6 +147,26 @@
             transform: none;
         }
 
+        .warning-panel {
+            background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #dd6b20;
+        }
+
+        .warning-panel h4 {
+            margin: 0 0 8px 0;
+            font-size: 1rem;
+        }
+
+        .warning-panel p {
+            margin: 0;
+            font-size: 0.9rem;
+            opacity: 0.95;
+        }
+
         .btn-secondary {
             background: #e2e8f0;
             color: #4a5568;
@@ -359,6 +379,11 @@
                     <p><small>Supported: WAV, MP3, FLAC, M4A</small></p>
                 </div>
 
+                <div id="fileSizeWarning" class="warning-panel" style="display: none;">
+                    <h4>⚠️ Large File Detected</h4>
+                    <p id="fileSizeWarningText"></p>
+                </div>
+
                 <input type="file" id="fileInput" multiple accept=".wav,.mp3,.flac,.m4a" class="hidden">
 
                 <div class="settings-panel">
@@ -491,6 +516,23 @@
                 const ext = file.name.toLowerCase().split('.').pop();
                 return ['wav', 'mp3', 'flac', 'm4a'].includes(ext);
             });
+            
+            // Check for large files (>35MB)
+            const largeFiles = selectedFiles.filter(file => file.size > 36700160); // ~35MB
+            const fileSizeWarning = document.getElementById('fileSizeWarning');
+            const fileSizeWarningText = document.getElementById('fileSizeWarningText');
+            
+            if (largeFiles.length > 0) {
+                const largeFileNames = largeFiles.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB)`).join(', ');
+                fileSizeWarningText.innerHTML = `
+                    <strong>Large file(s) detected:</strong> ${largeFileNames}<br>
+                    <small>Files larger than 35MB will be automatically chunked for processing. This may take longer but ensures compatibility with the server limits.</small><br>
+                    <small>For optimal performance with very large files, consider using the <strong>Desktop Standalone version</strong>.</small>
+                `;
+                fileSizeWarning.style.display = 'block';
+            } else {
+                fileSizeWarning.style.display = 'none';
+            }
             
             uploadBtn.disabled = selectedFiles.length === 0;
             uploadBtn.textContent = selectedFiles.length > 0 
