@@ -33,7 +33,7 @@ import studiovoice_pb2  # noqa: E402
 import studiovoice_pb2_grpc  # noqa: E402
 
 
-def read_file_content(file_path: os.PathLike) -> None:
+def read_file_content(file_path: os.PathLike) -> bytes:
     """Function to read file content as bytes.
 
     Args:
@@ -48,7 +48,7 @@ def read_file_content(file_path: os.PathLike) -> None:
 
 def generate_request_for_inference(
     input_filepath: os.PathLike, model_type: str, sample_rate: int, streaming: bool
-) -> None:
+) -> Iterator[studiovoice_pb2.EnhanceAudioRequest]:
     """Generator to produce the request data stream
 
     Args:
@@ -94,7 +94,7 @@ def write_output_file_from_response(
     output_filepath: os.PathLike,
     sample_rate: int,
     streaming: bool,
-) -> None:
+) -> int:
     """Function to write the output file from the incoming gRPC data stream.
 
     Args:
@@ -117,9 +117,10 @@ def write_output_file_from_response(
             for response in response_iter:
                 if response.HasField("audio_stream_data"):
                     fd.write(response.audio_stream_data)
+        return 0  # No response count for non-streaming mode
 
 
-def parse_args() -> None:
+def parse_args():
     """
     Parse command-line arguments using argparse.
     """
@@ -204,13 +205,13 @@ def parse_args() -> None:
 
 
 def process_request(
-    channel: any,
+    channel,
     input_filepath: os.PathLike,
     output_filepath: os.PathLike,
     model_type: str,
     sample_rate: int,
     streaming: bool,
-    request_metadata: dict = None,
+    request_metadata=None,
 ) -> None:
     """Function to process gRPC request
 

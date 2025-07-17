@@ -15,6 +15,12 @@ from datetime import datetime
 import subprocess
 import shutil
 
+# Import our large file handler
+try:
+    from large_file_handler import LargeFileProcessor
+except ImportError:
+    LargeFileProcessor = None
+
 class StudioVoiceDesktopApp:
     def __init__(self, root):
         self.root = root
@@ -29,6 +35,9 @@ class StudioVoiceDesktopApp:
         self.selected_files = []
         self.processing_queue = queue.Queue()
         self.is_processing = False
+        
+        # Initialize large file processor
+        self.large_file_processor = LargeFileProcessor() if LargeFileProcessor else None
         
         self.setup_ui()
         
@@ -45,7 +54,7 @@ class StudioVoiceDesktopApp:
         main_frame.rowconfigure(3, weight=1)
         
         # Title
-        title_label = ttk.Label(main_frame, text="🎵 Studio Voice Audio Enhancement", 
+        title_label = ttk.Label(main_frame, text="🎙️Studio Voice Audio Enhancement For Metahuman Face Captures🎙️", 
                                font=('Arial', 16, 'bold'))
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
         
@@ -153,8 +162,8 @@ class StudioVoiceDesktopApp:
             sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'scripts'))
             sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'interfaces', 'studio_voice'))
             
-            import studiovoice_pb2
-            import studiovoice_pb2_grpc
+            import studiovoice_pb2 # type: ignore
+            import studiovoice_pb2_grpc # type: ignore
             
             self.log("✅ All dependencies are installed and working!")
             messagebox.showinfo("Dependencies Check", "All dependencies are installed and working correctly!")
@@ -220,6 +229,7 @@ class StudioVoiceDesktopApp:
         if files:
             self.selected_files = list(files)
             self.update_files_display()
+            self.check_file_sizes()
             
     def select_folder(self):
         """Select a folder containing audio files"""
@@ -239,6 +249,7 @@ class StudioVoiceDesktopApp:
                 self.selected_files = files
                 self.update_files_display()
                 self.log(f"Found {len(files)} audio files in {folder}")
+                self.check_file_sizes()
             else:
                 messagebox.showwarning("No Files", "No audio files found in the selected folder")
                 
@@ -261,6 +272,37 @@ class StudioVoiceDesktopApp:
     def clear_log(self):
         """Clear the log text"""
         self.log_text.delete(1.0, tk.END)
+        
+    def check_file_sizes(self):
+        """Check selected files for size limits and warn user"""
+        if not self.large_file_processor:
+            return
+            
+        large_files = []
+        total_large_size = 0
+        
+        for file_path in self.selected_files:
+            if self.large_file_processor.needs_chunking(file_path):
+                file_info = self.large_file_processor.get_file_size_info(file_path)
+                large_files.append((file_path, file_info))
+                total_large_size += file_info['file_size_mb']
+        
+        if large_files:
+            message = f"⚠️ Found {len(large_files)} files exceeding the {self.large_file_processor.file_size_limit / (1024*1024):.1f}MB server limit:\n\n"
+            
+            for file_path, info in large_files[:5]:  # Show first 5
+                filename = os.path.basename(file_path)
+                message += f"• {filename}: {info['file_size_mb']:.1f}MB ({info['duration_seconds']:.1f}s)\n"
+            
+            if len(large_files) > 5:
+                message += f"• ... and {len(large_files) - 5} more files\n"
+                
+            message += f"\nTotal size of large files: {total_large_size:.1f}MB\n\n"
+            message += "These files will be automatically split into chunks, processed, and rejoined.\n"
+            message += "This may take longer but ensures successful processing."
+            
+            self.log("⚠️ Large files detected - chunking will be used")
+            messagebox.showinfo("Large Files Detected", message)
         
     def start_processing(self):
         """Start processing the selected files"""
@@ -354,6 +396,18 @@ class StudioVoiceDesktopApp:
     def process_single_file(self, input_file):
         """Process a single audio file using the existing Python script and manage files properly"""
         try:
+            # Check if file needs chunking due to size
+            if self.large_file_processor and self.large_file_processor.needs_chunking(input_file):
+                return self.process_large_file(input_file)
+            else:
+                return self.process_regular_file(input_file)
+        except Exception as e:
+            self.log(f"Error processing file: {str(e)}")
+            return False
+    
+    def process_regular_file(self, input_file):
+        """Process a regular-sized audio file"""
+        try:
             # Get the directory of the input file
             input_dir = os.path.dirname(input_file)
             filename = os.path.basename(input_file)
@@ -371,7 +425,11 @@ class StudioVoiceDesktopApp:
                 return False
             
             # Process to a temporary output file first
-            temp_output = input_file + ".temp_enhanced"
+            temp_output = input_file.replace('.wav', '_temp_enhanced.wav')
+            
+            # Ensure temp file has .wav extension even for non-wav inputs
+            if not temp_output.endswith('.wav'):
+                temp_output = input_file + '_temp_enhanced.wav'
             
             # Build command to process to temp file
             cmd = [
@@ -384,10 +442,14 @@ class StudioVoiceDesktopApp:
             if self.streaming_var.get():
                 cmd.append('--streaming')
             
+            # Log the command being executed for debugging
+            self.log(f"Executing command: {' '.join(cmd)}")
+            
             # Run the processing command
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
-            if result.returncode == 0 and os.path.exists(temp_output):
+            # Check if processing was actually successful
+            if result.returncode == 0 and os.path.exists(temp_output) and os.path.getsize(temp_output) > 0:
                 # Processing successful - now do the file management
                 try:
                     # Move original file to backup location
@@ -418,7 +480,25 @@ class StudioVoiceDesktopApp:
                         os.remove(temp_output)
                     return False
             else:
-                self.log(f"Error output: {result.stderr}")
+                # Log detailed error information
+                if result.returncode != 0:
+                    self.log(f"❌ Processing failed with return code: {result.returncode}")
+                    self.log(f"Error output: {result.stderr}")
+                    if result.stdout:
+                        self.log(f"Standard output: {result.stdout}")
+                elif not os.path.exists(temp_output):
+                    self.log(f"❌ Processing failed: Output file was not created")
+                    self.log(f"Command stderr: {result.stderr}")
+                    self.log(f"Command stdout: {result.stdout}")
+                elif os.path.getsize(temp_output) == 0:
+                    self.log(f"❌ Processing failed: Output file is empty (0 bytes)")
+                    self.log(f"This usually indicates a server connection issue")
+                    self.log(f"Command stderr: {result.stderr}")
+                    self.log(f"Command stdout: {result.stdout}")
+                else:
+                    self.log(f"❌ Processing failed for unknown reason")
+                    self.log(f"Error output: {result.stderr}")
+                    
                 # Clean up temp file if it exists
                 if os.path.exists(temp_output):
                     os.remove(temp_output)
@@ -429,6 +509,153 @@ class StudioVoiceDesktopApp:
             return False
         except Exception as e:
             self.log(f"Error running processing: {str(e)}")
+            return False
+    
+    def process_large_file(self, input_file):
+        """Process a large audio file by chunking it"""
+        try:
+            filename = os.path.basename(input_file)
+            file_info = self.large_file_processor.get_file_size_info(input_file)
+            
+            self.log(f"📦 Processing large file: {filename}")
+            self.log(f"   Size: {file_info['file_size_mb']:.1f}MB (limit: {file_info['limit_mb']:.1f}MB)")
+            self.log(f"   Duration: {file_info['duration_seconds']:.1f}s")
+            
+            # Estimate chunk duration
+            chunk_duration = self.large_file_processor.estimate_chunk_duration(input_file)
+            self.log(f"   Using {chunk_duration:.0f}s chunks")
+            
+            # Split file into chunks
+            self.log("🔪 Splitting file into chunks...")
+            chunk_files = self.large_file_processor.split_audio_file(input_file, chunk_duration)
+            self.log(f"   Created {len(chunk_files)} chunks")
+            
+            # Process each chunk
+            processed_chunks = []
+            failed_chunks = 0
+            
+            for i, chunk_file in enumerate(chunk_files):
+                if not self.is_processing:  # Check if user stopped processing
+                    break
+                    
+                self.log(f"🔄 Processing chunk {i+1}/{len(chunk_files)}")
+                
+                # Create output filename for this chunk
+                chunk_output = chunk_file.replace('.wav', '_processed.wav')
+                
+                # Process this chunk using regular processing
+                success = self.process_chunk(chunk_file, chunk_output)
+                
+                if success:
+                    processed_chunks.append(chunk_output)
+                else:
+                    failed_chunks += 1
+                    self.log(f"   ❌ Chunk {i+1} failed")
+            
+            # Check if all chunks processed successfully
+            if len(processed_chunks) == len(chunk_files) and failed_chunks == 0:
+                # Merge processed chunks
+                self.log("🔗 Merging processed chunks...")
+                
+                # Create final output file with proper .wav extension
+                temp_output = input_file.replace('.wav', '_temp_enhanced.wav')
+                
+                # Ensure temp file has .wav extension even for non-wav inputs  
+                if not temp_output.endswith('.wav'):
+                    temp_output = input_file + '_temp_enhanced.wav'
+                
+                success = self.large_file_processor.merge_audio_files(processed_chunks, temp_output)
+                
+                if success:
+                    # Do the file management (same as regular processing)
+                    return self.finalize_processed_file(input_file, temp_output)
+                else:
+                    self.log("❌ Failed to merge chunks")
+                    return False
+            else:
+                self.log(f"❌ Chunk processing failed: {failed_chunks} failures out of {len(chunk_files)} chunks")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Error processing large file: {str(e)}")
+            return False
+        finally:
+            # Clean up chunk files
+            if 'chunk_files' in locals():
+                self.large_file_processor.cleanup_chunks(chunk_files)
+            if 'processed_chunks' in locals():
+                self.large_file_processor.cleanup_chunks(processed_chunks)
+    
+    def process_chunk(self, input_chunk, output_chunk):
+        """Process a single audio chunk"""
+        try:
+            script_path = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'studio_voice.py')
+            
+            cmd = [
+                sys.executable, script_path,
+                '--input', input_chunk,
+                '--output', output_chunk,
+                '--model-type', self.model_var.get()
+            ]
+            
+            if self.streaming_var.get():
+                cmd.append('--streaming')
+            
+            # Run with shorter timeout for chunks
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            
+            # Check if chunk processing was successful
+            if result.returncode == 0 and os.path.exists(output_chunk) and os.path.getsize(output_chunk) > 0:
+                return True
+            else:
+                if result.stderr:
+                    self.log(f"   Chunk error: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            self.log("   Chunk processing timed out")
+            return False
+        except Exception as e:
+            self.log(f"   Chunk processing error: {str(e)}")
+            return False
+    
+    def finalize_processed_file(self, input_file, temp_output):
+        """Finalize the processed file by moving it to replace the original"""
+        try:
+            # Get the directory of the input file
+            input_dir = os.path.dirname(input_file)
+            filename = os.path.basename(input_file)
+            
+            # Create backup directory one level up from the audio file
+            backup_dir = os.path.join(input_dir, '..', 'original audio')
+            os.makedirs(backup_dir, exist_ok=True)
+            backup_file = os.path.join(backup_dir, filename)
+            
+            # Move original file to backup location
+            if os.path.exists(backup_file):
+                os.remove(backup_file)
+            shutil.move(input_file, backup_file)
+            
+            # Move enhanced file to replace original
+            shutil.move(temp_output, input_file)
+            
+            self.log(f"✅ File management complete:")
+            self.log(f"   Enhanced: {input_file}")
+            self.log(f"   Backup: {backup_file}")
+            
+            return True
+            
+        except Exception as e:
+            self.log(f"Error during file management: {str(e)}")
+            # Try to restore original file if it was moved
+            try:
+                if os.path.exists(backup_file) and not os.path.exists(input_file):
+                    shutil.move(backup_file, input_file)
+            except:
+                pass
+            # Clean up temp file if it exists
+            if os.path.exists(temp_output):
+                os.remove(temp_output)
             return False
 
 def main():

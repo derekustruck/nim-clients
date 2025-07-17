@@ -67,6 +67,16 @@ Before running client part of Studio Voice, please set up a server.
 The simplest way to do that is to follow the [quick start guide](https://docs.nvidia.com/nim/maxine/studio-voice/latest/index.html).
 This step can be skipped when using [Try API](https://build.nvidia.com/nvidia/studiovoice/api).
 
+podman run -it --name=studio-voice \
+    --device nvidia.com/gpu=all \
+    --shm-size=8GB \
+    -e NGC_API_KEY=$NGC_API_KEY \
+    -e FILE_SIZE_LIMIT=36700160 \
+    -e STREAMING=false \
+    -p 8000:8000 \
+    -p 8001:8001 \
+    nvcr.io/nim/nvidia/maxine-studio-voice:latest
+
 
 ### 4. Compile the Protos
 
@@ -172,10 +182,6 @@ start_advanced_web_ui.bat
 
 Launch a native Windows desktop application:
 
-```bash
-# Standard desktop UI
-start_desktop_ui.bat
-
 # Standalone version with built-in dependency management
 start_desktop_ui_standalone.bat
 ```
@@ -187,6 +193,7 @@ start_desktop_ui_standalone.bat
 - In-place file processing with backup management
 - Progress tracking with detailed status updates
 - Support for all Studio Voice model configurations
+- **Large file handling**: Automatically splits files over 35MB into chunks, processes them separately, and rejoins them
 
 ### Enhanced Command Line Interface
 
@@ -239,6 +246,49 @@ If you encounter dependency errors:
 
 3. Use the standalone versions which include built-in dependency management
 
+#### Zero-Byte Output Files
+
+If the desktop application reports "successful processing" but produces zero-byte files:
+
+1. **Check if the NIM server is running:**
+   ```bash
+   studio_voice_server.bat --status
+   ```
+   The server should show as "Up" and listening on ports 8000-8001.
+
+2. **Start the server if not running:**
+   ```bash
+   studio_voice_server.bat
+   ```
+
+3. **Test the connection manually:**
+   ```bash
+   cd scripts
+   nim\Scripts\activate.bat
+   python studio_voice.py --input ../assets/studio_voice_48k_input.wav --output test.wav
+   ```
+
+4. **Check the desktop UI logs** for detailed error messages that now include:
+   - Server connection issues
+   - Empty output file detection
+   - Detailed subprocess output
+
+**Note:** The desktop UI has been improved to detect and report zero-byte output files with specific error messages to help diagnose server connectivity issues.
+
+#### Large File Processing
+
+The desktop and web UIs now automatically handle audio files larger than the server's 35MB limit:
+
+1. **Automatic Detection**: Files exceeding the size limit are automatically detected
+2. **Smart Chunking**: Large files are split into optimal chunks (typically 2-3 minutes each)
+3. **Sequential Processing**: Each chunk is processed individually through the NIM server
+4. **Seamless Rejoining**: Processed chunks are automatically merged back into a single file
+5. **Progress Tracking**: Shows progress for both chunking and individual chunk processing
+
+**Example**: A 45MB, 4-minute audio file would be split into two ~27MB and ~18MB chunks, processed separately, then rejoined into a single enhanced file.
+
+This allows processing of audio files of virtually any size while respecting server limitations.
+
 ### UI Configuration
 
 All interfaces support the same Studio Voice configuration options:
@@ -249,3 +299,66 @@ All interfaces support the same Studio Voice configuration options:
 - **File Formats**: WAV files (same as command line client)
 
 The UI system maintains full compatibility with the existing Studio Voice NIM server setup and does not require additional server-side configuration.
+
+## Testing
+
+The project includes a comprehensive test suite organized in the `tests/` directory:
+
+```
+tests/
+├── core/                    # Core functionality tests
+│   └── test_desktop_ui_fix.py
+├── desktop-ui/              # Desktop UI specific tests
+│   ├── test_chunking.py
+│   ├── test_end_to_end.py
+│   ├── test_large_file_handler.py
+│   ├── test_processing_fix.py
+│   └── test_temp_file_fix.py
+├── scripts/                 # Batch script tests
+│   ├── test_loop.bat
+│   ├── test_podman.bat
+│   └── test_server.bat
+└── __init__.py
+```
+
+### Running Tests
+
+To run all tests, use the provided test runner from the project root:
+
+```bash
+# Activate virtual environment first
+nim\Scripts\activate.bat
+
+# Run all tests
+python run_tests.py
+```
+
+### Individual Test Categories
+
+- **Core Tests**: Basic audio processing and server communication
+- **Desktop UI Tests**: GUI functionality, large file handling, and chunking system
+- **Script Tests**: Batch file functionality for server management
+
+The test suite validates:
+- Zero-byte file detection and prevention
+- Large file chunking and merging (35MB+ files)
+- End-to-end processing workflows
+- Error handling and user feedback
+- Server connectivity and status checks
+
+## Project Structure
+
+```
+studio-voice/
+├── assets/                  # Sample audio files
+├── desktop-ui/              # Desktop GUI applications
+├── enhanced-cli/            # Enhanced command-line interface
+├── interfaces/              # Generated gRPC interfaces
+├── protos/                  # Protocol buffer definitions
+├── scripts/                 # Core processing scripts
+├── tests/                   # Organized test suite
+├── web-ui/                  # Web-based interfaces
+├── README.md               # This file
+├── run_tests.py            # Test runner script
+└── *.bat                   # Startup and utility scripts
+```

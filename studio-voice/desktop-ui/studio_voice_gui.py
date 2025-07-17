@@ -305,7 +305,11 @@ class StudioVoiceDesktopApp:
                 return False
             
             # Process to a temporary output file first
-            temp_output = input_file + ".temp_enhanced"
+            temp_output = input_file.replace('.wav', '_temp_enhanced.wav')
+            
+            # Ensure temp file has .wav extension even for non-wav inputs
+            if not temp_output.endswith('.wav'):
+                temp_output = input_file + '_temp_enhanced.wav'
             
             # Build command to process to temp file
             cmd = [
@@ -318,10 +322,14 @@ class StudioVoiceDesktopApp:
             if self.streaming_var.get():
                 cmd.append('--streaming')
             
+            # Log the command being executed for debugging
+            self.log(f"Executing command: {' '.join(cmd)}")
+            
             # Run the processing command
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
-            if result.returncode == 0 and os.path.exists(temp_output):
+            # Check if processing was actually successful
+            if result.returncode == 0 and os.path.exists(temp_output) and os.path.getsize(temp_output) > 0:
                 # Processing successful - now do the file management
                 try:
                     # Move original file to backup location
@@ -352,7 +360,25 @@ class StudioVoiceDesktopApp:
                         os.remove(temp_output)
                     return False
             else:
-                self.log(f"Error output: {result.stderr}")
+                # Log detailed error information
+                if result.returncode != 0:
+                    self.log(f"❌ Processing failed with return code: {result.returncode}")
+                    self.log(f"Error output: {result.stderr}")
+                    if result.stdout:
+                        self.log(f"Standard output: {result.stdout}")
+                elif not os.path.exists(temp_output):
+                    self.log(f"❌ Processing failed: Output file was not created")
+                    self.log(f"Command stderr: {result.stderr}")
+                    self.log(f"Command stdout: {result.stdout}")
+                elif os.path.getsize(temp_output) == 0:
+                    self.log(f"❌ Processing failed: Output file is empty (0 bytes)")
+                    self.log(f"This usually indicates a server connection issue")
+                    self.log(f"Command stderr: {result.stderr}")
+                    self.log(f"Command stdout: {result.stdout}")
+                else:
+                    self.log(f"❌ Processing failed for unknown reason")
+                    self.log(f"Error output: {result.stderr}")
+                    
                 # Clean up temp file if it exists
                 if os.path.exists(temp_output):
                     os.remove(temp_output)
